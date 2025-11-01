@@ -87,7 +87,7 @@ def get_best_classifier(train_activations, train_labels, seed):
     ])
 
     param_grid = [{
-        'model__C' : np.logspace(-5, -1, 8),
+        'model__C' : np.logspace(-4, 0, 8),
         'model__penalty': ['l2'],
         'model__solver': ['saga'],
         'model__max_iter': [5000]
