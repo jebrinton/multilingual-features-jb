@@ -15,10 +15,12 @@ from src.config import HF_TOKEN
 from src.probing.utils import extract_activations, concept_filter, get_available_languages, get_features_and_values
 from src.probing.data import ProbingDataset, balance_dataset
 
+import pathlib
+
 # Constants
 TRACER_KWARGS = {'scan': False, 'validate': False}
 LOG_DIR = 'logs'
-UD_BASE_FOLDER = "./data/universal_dependencies/"
+UD_BASE_FOLDER = pathlib.Path("/projectnb/mcnet/jbrin/.cache/ud/ud-treebanks-v2.16/")
 
 # Set up logging
 os.makedirs(LOG_DIR, exist_ok=True)
