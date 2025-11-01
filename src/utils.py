@@ -93,15 +93,20 @@ def get_available_languages(ud_base_folder):
     with open('data/languages.json', 'r') as f:
         valid_languages = set(json.load(f)["languages"])
 
-    languages = []
+    languages = set()
     for folder in os.listdir(ud_base_folder):
         if folder.startswith("UD_"):
-            language = folder[3:]  # Remove the "UD_" prefix
-            if not language.startswith(("Ancient", "Old")) and "-" not in language:
-                # Check if the language is in the valid_languages set
-                if language in valid_languages:
-                    languages.append(language)
-    return languages
+            # Extract language name up to the first '-' or end of string
+            language_with_suffix = folder[3:]  # Remove the "UD_" prefix
+            if "-" in language_with_suffix:
+                language = language_with_suffix.split("-")[0]
+            else:
+                language = language_with_suffix
+            
+            # Check if the language is in the valid_languages set
+            if language in valid_languages:
+                languages.add(language)
+    return sorted(list(languages))
 
 def get_available_concepts(probe_dir):
     """Get all available concept combinations from probe files that are also in data/concepts.json."""
@@ -164,11 +169,18 @@ class ProbingDataset(Dataset):
         self.load_data(conll_file)
 
     def load_data(self, conll_file):
-        data = pyconll.load_from_file(conll_file)
-        for sentence in data:
-            label = 1 if self.filter_criterion(sentence) else 0
-            self.sentences.append(sentence.text)
-            self.labels.append(label)
+        # Support both single file (string) and multiple files (list)
+        if isinstance(conll_file, str):
+            conll_files = [conll_file]
+        else:
+            conll_files = conll_file
+        
+        for file_path in conll_files:
+            data = pyconll.load_from_file(file_path)
+            for sentence in data:
+                label = 1 if self.filter_criterion(sentence) else 0
+                self.sentences.append(sentence.text)
+                self.labels.append(label)
 
     def __len__(self):
         return len(self.sentences)

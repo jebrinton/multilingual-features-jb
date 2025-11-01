@@ -3,8 +3,6 @@ import torch.nn as nn
 from tqdm import tqdm
 import numpy as np
 import pyconll
-import os
-
 
 TRACER_KWARGS = {'scan': False, 'validate': False}
 
@@ -29,7 +27,7 @@ def extract_activations(model, dataloader, layer_num):
             attn_mask = input[1]['attention_mask']
             acts = acts * attn_mask.unsqueeze(-1)
 
-            pooled_acts = acts.sum(1)
+            pooled_acts = acts.mean(1) # changed from sum to mean
             all_activations.append(pooled_acts.float().cpu().numpy())
             all_labels.append(labels.numpy())
     
@@ -41,15 +39,17 @@ def concept_filter(sentence, concept_key, concept_value):
             return True
     return False
 
-def get_features_and_values(conll_file):
-    data = pyconll.load_from_file(conll_file)
+def get_features_and_values(conll_files):
     features = {}
-    for sentence in data:
-        for token in sentence:
-            for feat, values in token.feats.items():
-                if feat not in features:
-                    features[feat] = set()
-                features[feat].update(values)
+    for conll_file in conll_files:
+        data = pyconll.load_from_file(conll_file)
+        for sentence in data:
+            for token in sentence:    
+                for feat, values in token.feats.items():
+                    if feat not in features:
+                        features[feat] = set(values)
+                    else:
+                        features[feat].update(values)
     return features
 
 class LogisticRegressionPyTorch(nn.Module):
@@ -69,3 +69,6 @@ def convert_probe_to_pytorch(probe):
         torch_probe.linear.weight.copy_(torch.tensor(coef).unsqueeze(0))
         torch_probe.linear.bias.copy_(torch.tensor(bias))
     return torch_probe.to("cuda")
+
+def get_available_languages(ud_base_folder):
+    return [path.split("_")[-1].split("-")[0] for path in ud_base_folder.iterdir() if path.is_dir()]

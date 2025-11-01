@@ -39,10 +39,25 @@ def setup_model_and_autoencoder(model_name):
         autoencoder = setup_autoencoder(checkpoint_path=AYA_AE_PATH)
     return model, submodule, autoencoder
 
-def get_ud_test_filepath(language):
-    ud_folder = os.path.join(UD_BASE_FOLDER, f"UD_{language}")
-    test_file = glob.glob(os.path.join(ud_folder, "*-ud-test.conllu"))
-    return test_file[0] if test_file else None
+def get_ud_test_filepaths(language):
+    """Get all test filepaths for Universal Dependencies across all treebanks for a language."""
+    test_filepaths = []
+    
+    # Find all directories matching UD_{language} or UD_{language}-*
+    if isinstance(UD_BASE_FOLDER, str):
+        base_path = UD_BASE_FOLDER
+    else:
+        base_path = str(UD_BASE_FOLDER)
+    
+    for folder in os.listdir(base_path):
+        if folder == f"UD_{language}" or folder.startswith(f"UD_{language}-"):
+            ud_folder = os.path.join(base_path, folder)
+            if os.path.isdir(ud_folder):
+                # Glob for test files in this treebank
+                test_files = glob.glob(os.path.join(ud_folder, "*-ud-test.conllu"))
+                test_filepaths.extend(test_files)
+    
+    return test_filepaths if test_filepaths else None
 
 def load_probe(probe_dir, language, concept_key, concept_value):
     probe_file = os.path.join(probe_dir, f"{language}_{concept_key}_{concept_value}.joblib")
@@ -155,9 +170,9 @@ def main(args):
         concept_results = defaultdict(dict)
         for language in languages:
             
-            test_filepath = get_ud_test_filepath(language)
-            if not test_filepath:
-                print(f"Test file not found for {language}. Skipping.")
+            test_filepaths = get_ud_test_filepaths(language)
+            if not test_filepaths:
+                print(f"Test files not found for {language}. Skipping.")
                 continue
             
             probe = load_probe(probe_dir, language, concept_key, concept_value)
@@ -166,7 +181,7 @@ def main(args):
                 continue
             
             filter_criterion = partial(concept_filter, concept_key=concept_key, concept_value=concept_value)
-            dataset = ProbingDataset(test_filepath, filter_criterion)
+            dataset = ProbingDataset(test_filepaths, filter_criterion)
             dataset = balance_dataset(dataset, args.seed)
             
             if dataset is None or len(dataset) < 32:

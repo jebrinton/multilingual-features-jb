@@ -8,7 +8,7 @@ probing_args = argparse.Namespace(
     layer_num=16,
     seed=42,
     # language="Dutch-Alpino",
-    language="English-PUD",
+    language="French",
     # language="Ukrainian-ParlaMint",
     
 )

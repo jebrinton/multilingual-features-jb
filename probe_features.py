@@ -18,10 +18,12 @@ from src.probing.attribution import attribution_patching
 from src.probing.data import ProbingDataset, balance_dataset
 from src.probing.utils import get_features_and_values, concept_filter, convert_probe_to_pytorch
 from src.utils import get_available_languages, get_available_concepts
+
+from src.config import UD_BASE_FOLDER
+
 # Constants
 TRACER_KWARGS = {'scan': False, 'validate': False}
 LOG_DIR = 'logs'
-UD_BASE_FOLDER = "./data/universal_dependencies/"
 AYA_AE_PATH = ""
 
 # Set up logging
@@ -74,16 +76,27 @@ def process_concept(args, concept_key, concept_value, model, submodule, autoenco
                 print(f"Skipping {language} - already processed.")
             continue
 
-        ud_folder = f"{UD_BASE_FOLDER}UD_{language}/"
-        ud_train_filepath = glob.glob(os.path.join(ud_folder, "*-ud-train.conllu"))
-        if not ud_train_filepath:
+        # Find all train files across all treebanks for this language
+        ud_train_filepaths = []
+        if isinstance(UD_BASE_FOLDER, str):
+            base_path = UD_BASE_FOLDER
+        else:
+            base_path = str(UD_BASE_FOLDER)
+        
+        for folder in os.listdir(base_path):
+            if folder == f"UD_{language}" or folder.startswith(f"UD_{language}-"):
+                ud_folder = os.path.join(base_path, folder)
+                if os.path.isdir(ud_folder):
+                    train_files = glob.glob(os.path.join(ud_folder, "*-ud-train.conllu"))
+                    ud_train_filepaths.extend(train_files)
+        
+        if not ud_train_filepaths:
             if verbose:
-                print(f"Training file not found for {language}. Skipping.")
+                print(f"Training files not found for {language}. Skipping.")
             continue
-        ud_train_filepath = ud_train_filepath[0]
 
         # Check if the concept exists for this language
-        features = get_features_and_values(ud_train_filepath)
+        features = get_features_and_values(ud_train_filepaths)
         if concept_key not in features or concept_value not in features[concept_key]:
             if verbose:
                 print(f"Concept {concept_key}:{concept_value} not found in the data for {language}. Skipping.")
@@ -99,8 +112,8 @@ def process_concept(args, concept_key, concept_value, model, submodule, autoenco
         probe = joblib.load(probe_file)
         torch_probe = convert_probe_to_pytorch(probe)
 
-        # Prepare dataset
-        train_dataset = prepare_dataset(ud_train_filepath, concept_key, concept_value, args.seed)
+        # Prepare dataset (ProbingDataset now accepts a list of files)
+        train_dataset = prepare_dataset(ud_train_filepaths, concept_key, concept_value, args.seed)
         if train_dataset is None or len(train_dataset) < 128:
             if verbose:
                 print(f"Not enough samples in training set for {language}_{concept_key}_{concept_value}. Skipping.")

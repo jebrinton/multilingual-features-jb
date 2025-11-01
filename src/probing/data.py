@@ -44,12 +44,19 @@ class ProbingDataset(Dataset):
         self.filter_criterion = filter_criterion
         self.load_data(conll_file)
 
-    def load_data(self, conll_file):
-        data = pyconll.load_from_file(conll_file)
-        for sentence in data:
-            label = 1 if self.filter_criterion(sentence) else 0
-            self.sentences.append(sentence.text)
-            self.labels.append(label)
+    def load_data(self, conll_files):
+        # Support both single file (string) and multiple files (list)
+        if isinstance(conll_files, str):
+            conll_files = [conll_files]
+        else:
+            conll_files = conll_files
+        
+        for file_path in conll_files:
+            data = pyconll.load_from_file(file_path)
+            for sentence in data:
+                label = 1 if self.filter_criterion(sentence) else 0
+                self.sentences.append(sentence.text)
+                self.labels.append(label)
 
     def __len__(self):
         return len(self.sentences)
