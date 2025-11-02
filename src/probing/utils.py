@@ -33,6 +33,34 @@ def extract_activations(model, dataloader, layer_num):
     
     return np.vstack(all_activations), np.concatenate(all_labels)
 
+
+def extract_word_activations(model, dataloader, layer_num):
+    """
+    Extract word activations for the entire dataset.
+    """
+    all_activations = []
+    all_labels = []
+    
+    with torch.no_grad():
+        for batch in tqdm(dataloader, desc="Extracting activations"):
+            text_batch = batch["sentence"]
+            labels = batch["label"]
+
+            with model.trace(text_batch, **TRACER_KWARGS):
+                input = model.inputs.save()
+                acts = model.model.layers[layer_num].output[0].save()
+            
+            # Remove padding tokens
+            attn_mask = input[1]['attention_mask']
+            acts = acts * attn_mask.unsqueeze(-1)
+
+            pooled_acts = acts.mean(1) # changed from sum to mean
+            all_activations.append(pooled_acts.float().cpu().numpy())
+            all_labels.append(labels.numpy())
+    
+    return np.vstack(all_activations), np.concatenate(all_labels)
+
+
 def concept_filter(sentence, concept_key, concept_value):
     for token in sentence:
         if concept_key in token.feats and concept_value in token.feats.get(concept_key, {}):

@@ -63,3 +63,16 @@ class ProbingDataset(Dataset):
 
     def __getitem__(self, idx):
         return {"sentence": self.sentences[idx], "label": self.labels[idx]}
+
+class WordProbingDataset(Dataset):
+    def __init__(self, conll_file, filter_criterion):
+        self.sentences = []
+        self.labels = []
+        self.filter_criterion = filter_criterion
+        self.load_data(conll_file)
+
+    def load_data(self, conll_file):
+        data = pyconll.load_from_file(conll_file)
+        for sentence in data:
+            for word in sentence:
+                print(word.form, word.feats, "--")
