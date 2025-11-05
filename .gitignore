@@ -1,6 +1,7 @@
 # project
 /logs
 /outputs
+/data/processed_sentences
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -87,10 +87,10 @@ def get_best_classifier(train_activations, train_labels, seed):
     ])
 
     param_grid = [{
-        'model__C' : np.logspace(-4, 0, 8),
+        'model__C' : np.logspace(1, 1, 1),
         'model__penalty': ['l2'],
         'model__solver': ['saga'],
-        'model__max_iter': [5000]
+        'model__max_iter': [100]
     }]
 
     grid_search = GridSearchCV(
